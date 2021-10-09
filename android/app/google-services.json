@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "809892168144",
+    "project_id": "fhossain6-midterm",
+    "storage_bucket": "fhossain6-midterm.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:809892168144:android:ae85c6b122967110dd79d5",
+        "android_client_info": {
+          "package_name": "com.example.midterm"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "809892168144-bcnk6kikm3ma57ljdetqkm080fmb7368.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyChT2ibgVBX_rX8vUl92neP_uxatP7PdM0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "809892168144-bcnk6kikm3ma57ljdetqkm080fmb7368.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
