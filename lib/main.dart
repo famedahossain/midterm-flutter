@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:splashscreen/splashscreen.dart';
-// Import the firebase_core plugin
 import 'package:firebase_core/firebase_core.dart';
 import 'driver.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
   runApp(App());
 }
 
@@ -59,7 +57,7 @@ class Splash2 extends StatelessWidget {
     return SplashScreen(
       seconds: 6,
       navigateAfterSeconds: AppDriver(),
-      title: new Text('Fan Page',textScaleFactor: 2,),
+      title: new Text('Midterm App',textScaleFactor: 2,),
       image: new Image.asset('assets/IMG_9296.jpg',),
       loadingText: Text("Loading"),
       photoSize: 200.0,

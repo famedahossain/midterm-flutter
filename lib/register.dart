@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'authenticate.dart';
 import 'driver.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -11,7 +12,6 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   late TextEditingController _emailController,
@@ -22,7 +22,6 @@ class _RegisterPageState extends State<RegisterPage> {
       _lastnameController,
       _phonenumberController;
   final _formKey = GlobalKey<FormState>();
-  String _userCredential ="";
 
   @override
   void initState() {
@@ -190,10 +189,10 @@ class _RegisterPageState extends State<RegisterPage> {
 
   Future<void> register() async {
     try {
+      var authenticate = Authenticate().authorize();
       UserCredential userCredential =
-      await _auth.createUserWithEmailAndPassword(
+      await authenticate.createUserWithEmailAndPassword(
           email: _emailController.text, password: _passwordController.text);
-      // setState(() {
       _db
           .collection("user")
           .doc(userCredential.user!.uid)
@@ -204,7 +203,6 @@ class _RegisterPageState extends State<RegisterPage> {
         "role": "customer",
         "register_date": DateTime.now()
       })
-      // ;
           .then((value) => null)
           .onError((error, stackTrace) => null);
       Navigator.pushReplacement(context,MaterialPageRoute(builder:  (con) => AppDriver()));

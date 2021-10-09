@@ -1,23 +1,24 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'phone.dart';
+import 'authenticate.dart';
 import 'driver.dart';
+import 'email_only.dart';
 import 'register.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'loading.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
+
   @override
-  _LoginState createState() => _LoginState();
+  State<LoginPage> createState() => _LoginState();
 }
 
 class _LoginState extends State<LoginPage> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _emailController, _passwordController;
+  late TextEditingController _emailController, _passwordController, _phoneNumberController;
 
   get model => null;
 
@@ -26,21 +27,25 @@ class _LoginState extends State<LoginPage> {
     super.initState();
     _emailController = TextEditingController();
     _passwordController = TextEditingController();
+    _phoneNumberController = TextEditingController();
   }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _phoneNumberController.dispose();
     super.dispose();
   }
 
   bool _loading = false;
   String _email = "";
   String _password = "";
+  String _phone = "";
 
   @override
   Widget build(BuildContext context) {
+
     final emailInput = TextFormField(
       autocorrect: false,
       controller: _emailController,
@@ -51,11 +56,12 @@ class _LoginState extends State<LoginPage> {
         return null;
       },
       decoration: const InputDecoration(
-          labelText: "EMAIL ADDRESS",
+          labelText: "Email Address",
           border: OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(10.0))),
           hintText: 'Enter Email'),
     );
+
     final passwordInput = TextFormField(
       autocorrect: false,
       controller: _passwordController,
@@ -67,7 +73,7 @@ class _LoginState extends State<LoginPage> {
       },
       obscureText: true,
       decoration: const InputDecoration(
-        labelText: "PASSWORD",
+        labelText: "Password",
         border: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(10.0))),
         hintText: 'Enter Password',
@@ -77,6 +83,7 @@ class _LoginState extends State<LoginPage> {
         ),
       ),
     );
+
     final submitButton = OutlinedButton(
       onPressed: () {
         if (_formKey.currentState!.validate()) {
@@ -85,32 +92,63 @@ class _LoginState extends State<LoginPage> {
           _email = _emailController.text;
           _password = _passwordController.text;
 
-          // _emailController.clear();
-          // _passwordController.clear();
+          _emailController.clear();
+          _passwordController.clear();
 
           setState(() {
             _loading = true;
-            login();
+            Authenticate().signInWithEmailAndPassword(_email, _password, context);
           });
         }
       },
       child: const Text('Submit'),
     );
 
-    final registerButton = OutlinedButton(
-      onPressed: () {
-        Navigator.push(
-            context, MaterialPageRoute(builder: (con) => const RegisterPage()));
-      },
-      child: const Text('Register'),
-    );
+    final registerButton = Container(
+        width: 250.0,
+        child: OutlinedButton(
+          onPressed: () {
+            Navigator.push(
+                context, MaterialPageRoute(builder: (con) => const RegisterPage()));
+          },
+          child: const Text('Register'),
+    ));
 
-    final google = IconButton(
-      icon: Image.asset('assets/googleicon.png'),
-      iconSize: 30,
-      onPressed: (){
-        googleSignIn();
-      }, );
+    final justEmail = Container(
+        width: 250.0,
+        child: OutlinedButton(
+          onPressed:(){
+            Navigator.push(
+                context,MaterialPageRoute(builder: (con) => OnlyEmail()));
+          }, child:Text("Sign In With Only Email"),
+    ));
+
+    final google = Container(
+        width: 250.0,
+        child: IconButton(
+          icon: Image.asset('assets/googleicon.png'),
+          iconSize: 30,
+          onPressed: (){
+            Authenticate().googleSignIn(context);;
+          },
+    ));
+
+    final phone = Container(
+        width: 250.0,
+        child: OutlinedButton(
+        onPressed:(){
+          Navigator.push(
+              context,MaterialPageRoute(builder: (con) => const PhoneSignIn()));},
+        child: Text("Sign in with Phone Number"),
+    ));
+
+    final anon = Container(
+      width: 250.0,
+      child: OutlinedButton(
+        onPressed: (){
+          Authenticate().anonSignIn(context);},
+        child:Text("Sign in Anonymously"),
+    ));
 
     return Scaffold(
       backgroundColor: Colors.blue.shade100,
@@ -118,20 +156,18 @@ class _LoginState extends State<LoginPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            _auth.currentUser != null
-                ? Text(_auth.currentUser!.uid)
-                : _loading
-                ? Loading()
-                : Form(
+            Form(
               key: _formKey,
               child: Column(
                 children: <Widget>[
-                  // Add TextFormFields and ElevatedButton here.
                   emailInput,
                   passwordInput,
                   submitButton,
+                  justEmail,
+                  phone,
+                  google,
+                  anon,
                   registerButton,
-                  google
                 ],
               ),
             )
@@ -139,69 +175,6 @@ class _LoginState extends State<LoginPage> {
         ),
       ),
       // This trailing comma makes auto-formatting nicer for build methods.
-      floatingActionButton: FloatingActionButton(
-        onPressed: signOut,
-        tooltip: 'Log out',
-        child: const Icon(Icons.logout),
-      ),
     );
   }
-
-  Future<void> login() async {
-    await Firebase.initializeApp();
-    try {
-      UserCredential _ = await _auth.signInWithEmailAndPassword(
-          email: _email, password: _password);
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (con) => AppDriver()));
-    } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      if (e.code == 'user-not-found') {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No user found for that email.')));
-      } else if (e.code == 'wrong-password') {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Wrong password provided for that user.')));
-      } else {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("Something Else")));
-      }
-    } catch (e) {
-      print(e);
-    }
-
-    setState(() {
-      _loading = false;
-    });
-  }
-
-  void signOut() async {
-    ScaffoldMessenger.of(context).clearSnackBars();
-    if(_auth.currentUser != null) {
-      await _auth.signOut();
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Logged out")));
-    }else{
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("No user logged in")));
-    }
-    setState(() {
-
-    });
-  }
-
-  void  googleSignIn() async {
-    final GoogleSignInAccount googleUser = await GoogleSignIn().signIn();
-    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
-
-    await FirebaseAuth.instance.signInWithCredential(credential);
-
-    Navigator.pushReplacement(context,MaterialPageRoute(builder:  (con) => AppDriver()));
-  }
-
 }
