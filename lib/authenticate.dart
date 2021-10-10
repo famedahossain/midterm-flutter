@@ -1,9 +1,13 @@
+import 'package:midterm/home_view.dart';
 import 'driver.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_dynamic_links/firebase_dynamic_links.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:intl/intl.dart';
 
 class Authenticate {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -17,6 +21,12 @@ class Authenticate {
 
   authorizedUser(){
     return _auth.currentUser;
+  }
+
+  user(){
+    User? user =_auth.currentUser;
+    String id = user!.uid;
+    return id;
   }
 
   void anonSignIn(context) async{
@@ -34,7 +44,6 @@ class Authenticate {
           email: _email,
           password: _password);
       Navigator.push(context,MaterialPageRoute(builder:  (context) => AppDriver()));
-
     }on FirebaseAuthException catch(e) {
       ScaffoldMessenger.of(context).clearSnackBars();
       if (e.code == 'wrong-password') {
@@ -49,22 +58,32 @@ class Authenticate {
     }
   }
 
-  void signInOnlyEmail(_email, context) async{
-    try{
-      _auth.sendSignInLinkToEmail(
+  void signInOnlyEmail(_email) async{
+      await _auth.sendSignInLinkToEmail(
         email: _email,
         actionCodeSettings: ActionCodeSettings(
-            url: "fhossain6-midterm.firebaseapp.com",
+            url: "https://fhossain6-midterm.firebaseapp.com",
             androidPackageName: "com.example.midterm",
             iOSBundleId: "com.example.midterm",
             handleCodeInApp: true,
             androidMinimumVersion: "16",
             androidInstallApp: true),
       );
-      Navigator.push(context,MaterialPageRoute(builder:  (context) => AppDriver()));
-    }on FirebaseAuthException catch(e)
-    {}catch(e){
-      print(e);
+  }
+
+  handleLink(Uri link, _email, context) async {
+    if (link != null) {
+      final user = (await _auth.signInWithEmailLink(
+        email: _email,
+        emailLink: link.toString(),
+      )).user;
+      if (user != null) {
+        return true;
+      } else {
+        return false;
+      }
+    }else {
+      return false;
     }
   }
 
@@ -91,10 +110,9 @@ class Authenticate {
       codeSent: codeSent,
       codeAutoRetrievalTimeout: (String verificationId) {},
     );
-    print(_verificationId);
   }
 
-  void signInWithPhone(_sms, context) async{
+  void signInPhone(_sms, context) async{
     try {
       final AuthCredential credential = PhoneAuthProvider.credential(
         verificationId: _verificationId,
@@ -102,44 +120,41 @@ class Authenticate {
       );
       print(credential);
       final User? user = (await _auth.signInWithCredential(credential)).user;
-
-      Navigator.push(context,MaterialPageRoute(builder:  (context) => AppDriver()));
+      Navigator.push(context,MaterialPageRoute(builder:  (context) => HomePage()));
     } catch (e) {
-      print("Id: $_verificationId");
       print(e);
     }
+    Navigator.push(context,MaterialPageRoute(builder:  (context) => HomePage()));
   }
 
   void googleSignIn(context) async{
-    final GoogleSignInAccount googleUser = await GoogleSignIn().signIn();
+    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
 
-    final GoogleSignInAuthentication googleAuth = await googleUser
-        .authentication;
+    final GoogleSignInAuthentication googleAuth = await googleUser!.authentication;
 
     final credential = GoogleAuthProvider.credential(
       accessToken: googleAuth.accessToken,
       idToken: googleAuth.idToken,
     );
-    print(credential);
 
     await FirebaseAuth.instance.signInWithCredential(credential);
     final QuerySnapshot result = await FirebaseFirestore.instance
-        .collection('users')
+        .collection('user')
         .where('first_name', isEqualTo: googleUser.displayName)
         .limit(1)
         .get();
-    print(result.docs);
-    print(googleUser.email);
     final List <DocumentSnapshot> docs = result.docs;
     if (docs.isEmpty) {
       try {
         _db
-            .collection("users")
+            .collection("user")
             .doc()
             .set({
           "first_name": googleUser.displayName,
           "last_name": '',
           "role": 'customer',
+          "url": '',
+          "uid" : credential,
           "registration_deadline": DateTime.now(),
         })
             .then((value) => null)
@@ -156,6 +171,18 @@ class Authenticate {
       Navigator.pushReplacement(
           context, MaterialPageRoute(builder: (con) => AppDriver()));
     }
+  }
+
+  void facebookSignIn(context) async{
+    final LoginResult fbUser = await FacebookAuth.instance.login();
+    final AuthCredential facebookCredential =
+    FacebookAuthProvider.credential(fbUser.accessToken!.token);
+
+    final userCredential =
+    await _auth.signInWithCredential(facebookCredential);
+
+    Navigator.pushReplacement(
+        context, MaterialPageRoute(builder: (con) => AppDriver()));
   }
 
   void signOut(BuildContext context) async {

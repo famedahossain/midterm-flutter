@@ -10,7 +10,6 @@ import 'loading.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
-
   @override
   State<LoginPage> createState() => _LoginState();
 }
@@ -124,14 +123,22 @@ class _LoginState extends State<LoginPage> {
     ));
 
     final google = Container(
+      width: 250.0,
+      child : OutlinedButton.icon(
+        icon: Image.asset('assets/googleicon.png', height: 20, width: 20,),
+        label: const Text("Sign in With Google"),
+        onPressed: (){
+          Authenticate().googleSignIn(context);
+        } ));
+
+    final facebook = Container(
         width: 250.0,
-        child: IconButton(
-          icon: Image.asset('assets/googleicon.png'),
-          iconSize: 30,
-          onPressed: (){
-            Authenticate().googleSignIn(context);;
-          },
-    ));
+        child: OutlinedButton.icon(
+        icon: Image.asset('assets/facebook.png', height: 20, width: 20,),
+        label: const Text("Sign in With Facebook"),
+        onPressed: (){
+          Authenticate().facebookSignIn(context);
+        } ));
 
     final phone = Container(
         width: 250.0,
@@ -166,6 +173,7 @@ class _LoginState extends State<LoginPage> {
                   justEmail,
                   phone,
                   google,
+                  facebook,
                   anon,
                   registerButton,
                 ],

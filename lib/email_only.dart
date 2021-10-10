@@ -1,5 +1,8 @@
+import 'package:firebase_dynamic_links/firebase_dynamic_links.dart';
 import 'package:flutter/material.dart';
+import 'driver.dart';
 import 'authenticate.dart';
+import 'loading.dart';
 
 class OnlyEmail extends StatefulWidget {
   OnlyEmail({Key? key}) : super(key: key);
@@ -7,77 +10,91 @@ class OnlyEmail extends StatefulWidget {
   @override
   _OnlyEmailSignInState createState() => _OnlyEmailSignInState();
 }
-class _OnlyEmailSignInState extends State<OnlyEmail> {
-
+class _OnlyEmailSignInState extends State<OnlyEmail> with WidgetsBindingObserver{
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _emailController;
+  bool _success = false;
+
   void initState(){
     super.initState();
+    WidgetsBinding.instance!.addObserver(this);
     _emailController = TextEditingController();
   }
-  void dipose(){
+
+  void dispose(){
     _emailController.dispose();
+    WidgetsBinding.instance!.removeObserver(this);
     super.dispose();
   }
 
   String _email = '';
+
   @override
   Widget build(BuildContext context){
-
-    final emailInput = TextFormField(
-      autocorrect: false,
-      controller: _emailController,
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return "Please enter your email";
-        }
-        return null;
-      },
-      decoration: const  InputDecoration(
-          labelText: "Email Address",
-          border: OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(15.0))),
-          hintText: "Enter Email"),
-    );
-
-    final submit = OutlinedButton(
-      onPressed:(){
-        if(_formKey.currentState!.validate()){
-          ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text('Loading Data')));
-          _email = _emailController.text;
-          _emailController.clear();
-
-
-          setState(() {
-            Authenticate().signInOnlyEmail(_email, context);
-          });
-        }
-      },
-      child: const Text('Submit'),
-    );
-
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Sign In With Only Email"),
-      ),
-      backgroundColor: Colors.lime.shade400,
-      body: Center(
+        appBar: AppBar(
+          title: Text("Sign In With Just Email"),
+        ),
+        backgroundColor: Colors.lime.shade400,
+        body: Form(
+          key: _formKey,
           child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Form(
-                    key: _formKey,
-                    child: Column(
-                      children: <Widget> [
-                        emailInput,
-                        submit
-                      ],
-                    )
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Container(
+              width: 400,
+              child: TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(labelText: 'Email'),
+                validator: (value){
+                  if(value == null || value.isEmpty){
+                    return 'Email cannot be empty';
+                  }
+                  return null;
+                },
+              )),
+              Container(
+                alignment: Alignment.center,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    if (_formKey.currentState!.validate()) {
+                      Authenticate().signInOnlyEmail(_emailController.text);
+                    }
+                  },
+                  child: const Text('Submit'),
                 ),
-              ]
-          )
-      ),
+              ),
+            ],
+          ),
+        )
     );
   }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.resumed) {
+      final PendingDynamicLinkData? data =
+      await FirebaseDynamicLinks.instance.getInitialLink();
+      if( data?.link != null ) {
+        Authenticate().handleLink(data!.link, _email, context);
+      }
+      FirebaseDynamicLinks.instance.onLink(
+          onSuccess: (PendingDynamicLinkData? dynamicLink) async {
+            final Uri? deepLink = dynamicLink?.link;
+            _success = Authenticate().handleLink(deepLink!, _email, context);
+          }, onError: (OnLinkErrorException e) async {
+        print('onLinkError');
+        print(e.message);
+      });
+      setState(() {
+        _success;
+        if(_success){
+          Navigator.push(context,MaterialPageRoute(builder: (context) => AppDriver()));
+        }else{
+          Loading();
+        }
+      });
+    }
+  }
+
 }

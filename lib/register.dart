@@ -3,6 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'authenticate.dart';
 import 'driver.dart';
+import 'dart:io';
+import 'home_view.dart';
+import 'package:intl/intl.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({Key? key}) : super(key: key);
@@ -13,6 +18,7 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  File? _image;
 
   late TextEditingController _emailController,
       _reemailController,
@@ -58,7 +64,7 @@ class _RegisterPageState extends State<RegisterPage> {
         body: Form(
             key: _formKey,
             child: Column(children: [
-              const SizedBox(height: 20.0),
+              const SizedBox(height: 3),
               TextFormField(
                 autocorrect: false,
                 controller: _emailController,
@@ -74,7 +80,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         borderRadius: BorderRadius.all(Radius.circular(10.0))),
                     hintText: 'Enter email address'),
               ),
-              const SizedBox(height: 20.0),
+              const SizedBox(height: 7),
               TextFormField(
                 autocorrect: false,
                 controller: _reemailController,
@@ -90,7 +96,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         borderRadius: BorderRadius.all(Radius.circular(10.0))),
                     hintText: 'Re-enter email address'),
               ),
-              const SizedBox(height: 20.0),
+              const SizedBox(height: 7),
               TextFormField(
                 autocorrect: false,
                 controller: _passwordController,
@@ -106,7 +112,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         borderRadius: BorderRadius.all(Radius.circular(10.0))),
                     hintText: 'Enter password'),
               ),
-              const SizedBox(height: 20.0),
+              const SizedBox(height: 7),
               TextFormField(
                 autocorrect: false,
                 controller: _repasswordController,
@@ -122,7 +128,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         borderRadius: BorderRadius.all(Radius.circular(10.0))),
                     hintText: 'Verify password'),
               ),
-              const SizedBox(height: 20.0),
+              const SizedBox(height: 7),
               TextFormField(
                 autocorrect: false,
                 controller: _firstnameController,
@@ -138,7 +144,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         borderRadius: BorderRadius.all(Radius.circular(10.0))),
                     hintText: 'Enter first name'),
               ),
-              const SizedBox(height: 20.0),
+              const SizedBox(height: 7),
               TextFormField(
                 autocorrect: false,
                 controller: _lastnameController,
@@ -154,7 +160,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         borderRadius: BorderRadius.all(Radius.circular(10.0))),
                     hintText: 'Enter last name'),
               ),
-              const SizedBox(height: 20.0),
+              const SizedBox(height: 7),
               TextFormField(
                 autocorrect: false,
                 controller: _phonenumberController,
@@ -170,13 +176,17 @@ class _RegisterPageState extends State<RegisterPage> {
                         borderRadius: BorderRadius.all(Radius.circular(10.0))),
                     hintText: 'Enter phone number'),
               ),
-              const SizedBox(height: 30.0),
+              OutlinedButton(
+                  onPressed:(){
+                    image(true);
+                  },
+                  child:const Text("Add Photo")),
+              const SizedBox(height: 3),
               OutlinedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
                     ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Processing Data')));
-
                     setState(() {
                       register();
                     });
@@ -201,6 +211,7 @@ class _RegisterPageState extends State<RegisterPage> {
         "last_name": _lastnameController.text,
         "phone": _phonenumberController.text,
         "role": "customer",
+        "uid" : userCredential.user!.uid,
         "register_date": DateTime.now()
       })
           .then((value) => null)
@@ -216,5 +227,40 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     setState(() {});
+  }
+
+  Future image(bool gallery) async {
+    ImagePicker imagePicker = ImagePicker();
+    XFile image;
+    if(gallery) {
+      image = (await imagePicker.pickImage(
+          source: ImageSource.gallery,imageQuality: 50))!;
+    }
+    else{
+      image = (await imagePicker.pickImage(
+          source: ImageSource.camera,imageQuality: 50))!;
+    }
+    setState(() {
+      _image = File(image.path);
+    });
+  }
+
+  Future<void> addImage() async {
+    String id = Authenticate().user();
+
+    var storage = FirebaseStorage.instance;
+    TaskSnapshot snapshot = await storage
+        .ref()
+        .child(id)
+        .putFile(_image!);
+    if (snapshot.state == TaskState.success) {
+      final String downloadUrl =
+      await snapshot.ref.getDownloadURL();
+      await FirebaseFirestore.instance
+          .collection("user")
+          .doc(id)
+          .update({"url": downloadUrl});
+    }
+    Navigator.pushReplacement(context,MaterialPageRoute(builder:  (con) => AppDriver()));
   }
 }

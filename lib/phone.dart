@@ -10,15 +10,15 @@ class PhoneSignIn extends StatefulWidget {
 }
 class _PhoneSignInState extends State<PhoneSignIn> {
   final SmsAutoFill _autoFill = SmsAutoFill();
-  late TextEditingController
-  _phoneController, _smsController;
+  late TextEditingController _phoneController, _smsController;
 
   void initState(){
     super.initState();
     _phoneController = TextEditingController();
     _smsController = TextEditingController();
   }
-  void dipose(){
+
+  void dispose(){
     _phoneController.dispose();
     _smsController.dispose();
     super.dispose();
@@ -40,11 +40,11 @@ class _PhoneSignInState extends State<PhoneSignIn> {
             children: <Widget>[
               TextFormField(
                 controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Enter In Your Phone Number (XXX-XXX-XXXX)'),
+                decoration: const InputDecoration(labelText: 'Enter In Your Phone Number (+1 XXX-XXX-XXXX)'),
               ),
               Container(
                 alignment: Alignment.center,
-                child: RaisedButton(
+                child: ElevatedButton(
                   child: Text("Verify Your Number"),
                   onPressed: () async {
                     Authenticate().phoneSignIn(_phoneController.text, context);
@@ -57,9 +57,9 @@ class _PhoneSignInState extends State<PhoneSignIn> {
               ),
               Container(
                 alignment: Alignment.center,
-                child: RaisedButton(
+                child: ElevatedButton(
                     onPressed: () async {
-                      Authenticate().signInWithPhone(_smsController.text, context);
+                      Authenticate().signInPhone(_smsController.text, context);
                     },
                     child: Text("Sign In")),
               ),
